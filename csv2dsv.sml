@@ -1,7 +1,7 @@
 exception UnevenFields of string;
 exception QuoteMismatch;
 
-(*Functino to print uneven field exception*)
+(*Function to print uneven field exception*)
 fun unevenfield_output(fieldCount, totalFields, row) = 
     "Found "^Int.toString(fieldCount)^" fields at line "^Int.toString(row)^": Expected "^Int.toString(totalFields)^"\n";
 
@@ -33,7 +33,7 @@ fun convertDelimiters(infilename, delim1, outfilename, delim2) =
 										TextIO.output1(outs,c);
 										helper(TextIO.input1(ins), quoteCount, quoteAdded)
 									)
-									else (*if c=delim1 and quotes are matched (field is completer)*)
+									else (*if c=delim1 and quotes are matched (field is complete)*)
 									(
 										if quoteAdded = true then TextIO.output1(outs,#"\"") else (); (*if quote is manually added, then, will have to manually match the quote*)
 										fieldCount := (!fieldCount)+1; (*number of fields are incremented*)
@@ -47,11 +47,14 @@ fun convertDelimiters(infilename, delim1, outfilename, delim2) =
 									(
 										TextIO.output1(outs,c);
 										if quoteCount = 0 then helper(TextIO.input1(ins), 1, false) (*all quotes are matched then it means that field has just begun*)
-										else if quoteCount = 2 then helper(TextIO.input1(ins), 1, quoteAdded) (*already 2 quotes have occured in the filed (1 at beginning and other act as escaping quote for current quote) => mismatch quote is 1*)
+										else if quoteCount = 2 then helper(TextIO.input1(ins), 1, quoteAdded) (*already 2 quotes have occured in the field (1 at beginning and other act as escaping quote for current quote) => mismatch quote is 1*)
 										else helper(TextIO.input1(ins), quoteCount+1, quoteAdded) 
 									)
-									else if (c = #"\n" andalso (quoteCount=2 orelse quoteAdded)) then (*if endline and field is complete, then, row is over*)
+									 (*if endline and field is complete, then, row is over
+									 	quoteCount=0 andalso quoteAdded = false corresponds to empty field case *)
+									else if (c = #"\n" andalso (quoteCount=2 orelse quoteAdded orelse (quoteCount=0 andalso quoteAdded = false))) then
 									(
+										if (quoteCount=0 andalso quoteAdded=false) then (TextIO.output1(outs,#"\""); TextIO.output1(outs,#"\"")) else ();
 										if quoteAdded = true then TextIO.output1(outs,#"\"") else ();
 										TextIO.output1(outs,c);
 										fieldCount := (!fieldCount)+1;
@@ -67,7 +70,7 @@ fun convertDelimiters(infilename, delim1, outfilename, delim2) =
 									) 
 									else 
 									(
-										if quoteCount=0 then (*if input field does not quote at beginning then add manually*)
+										if quoteCount=0 then (*if input field does not quote at beginning, then, add manually*)
 										(
 											TextIO.output1(outs,#"\"");
 											TextIO.output1(outs,c);
@@ -93,3 +96,7 @@ fun convertDelimiters(infilename, delim1, outfilename, delim2) =
 			   QuoteMismatch => print("Exception QuoteMismatch: Quotes are not matched properly\n") |
 			   Io => print("Exception FileNotFound: File to be converted not found\n");
 
+
+fun csv2tsv(infilename, outfilename) = convertDelimiters(infilename, #",", outfilename, #"\t");
+
+fun tsv2csv(infilename, outfilename) = convertDelimiters(infilename, #"\t", outfilename, #",");
